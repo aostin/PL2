@@ -862,7 +862,7 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 			
 			if (expresion.getValor()==0 || expresion.getValor()==1) {
 				SentenciaIF sIF = new SentenciaIF((Expresion)ex, false);
-				sIF.addS1((Bloque_sentencias)sen);
+				sIF.setS1((Bloque_sentencias)sen);
 				RESULT = sIF;
 			}
 			else
@@ -879,7 +879,7 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 					if (expresion.getValor()==0 || expresion.getValor()==1) {
 	
 						SentenciaIF sIF = new SentenciaIF((Expresion)ex, false);
-						sIF.addS1((Bloque_sentencias)s);
+						sIF.setS1((Bloque_sentencias)s);
 						RESULT = sIF;
 					}
 					
@@ -895,8 +895,8 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 						Expresion expresion = (Expresion)ex;
 						if (expresion.getValor()==0 || expresion.getValor()==1) {
 							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
-							sIF.addS1((Bloque_sentencias)s1);
-							sIF.addS2((Bloque_sentencias)s2);
+							sIF.setS1((Bloque_sentencias)s1);
+							sIF.setS2((Bloque_sentencias)s2);
 							RESULT = sIF;
 						}
 	
@@ -912,8 +912,8 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 				
 						if (expresion.getValor()==0 || expresion.getValor()==1) {
 							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
-							sIF.addS1((Bloque_sentencias)sen);
-							sIF.addS2((Bloque_sentencias)bloque);
+							sIF.setS1((Bloque_sentencias)sen);
+							sIF.setS2((Bloque_sentencias)bloque);
 							RESULT = sIF;
 					}
 
@@ -932,8 +932,8 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 					
 						if (expresion.getValor()==0 || expresion.getValor()==1) {
 							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
-							sIF.addS1((Bloque_sentencias)bloque);
-							sIF.addS2((Bloque_sentencias)sen);
+							sIF.setS1((Bloque_sentencias)bloque);
+							sIF.setS2((Bloque_sentencias)sen);
 							RESULT = sIF;
 				}
 
@@ -953,8 +953,8 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 					
 						if (expresion.getValor()==0 || expresion.getValor()==1) {
 							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
-							sIF.addS1((Bloque_sentencias)bloque1);
-							sIF.addS2((Bloque_sentencias)bloque1);
+							sIF.setS1((Bloque_sentencias)bloque1);
+							sIF.setS2((Bloque_sentencias)bloque1);
 							RESULT = sIF;
 				}
 
@@ -970,8 +970,43 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 					
 					;
 
-sentencia_while ::= WHILE PARIZQ expresion PARDER sentencia |			
-					WHILE PARIZQ expresion PARDER bloque_sentencias;
+sentencia_while ::= WHILE PARIZQ:p expresion:ex PARDER sentencia:sen 
+{:
+	
+
+	Expresion expresion = (Expresion)ex;
+
+	if (expresion.getValor()==0 || expresion.getValor()==1) {
+		Sentencia_While sWhile = new Sentencia_While();
+		sWhile.setS1((Bloque_sentencias)sen);
+		RESULT = sWhile;
+	}
+
+	else
+		semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+
+
+
+
+:}
+
+
+|			
+					WHILE PARIZQ:p expresion:ex PARDER bloque_sentencias:bloque {:
+						
+						Expresion expresion = (Expresion)ex;
+
+					if (expresion.getValor()==0 || expresion.getValor()==1) {
+						Sentencia_While sWhile = new Sentencia_While();
+						sWhile.setS1((Bloque_sentencias)bloque);
+						RESULT = sWhile;
+					}
+
+					else
+						semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+					
+					
+					:};
 					
 sentencia_printi ::= PRINTI PARIZQ expresion PARDER PUNTOYCOMA |
 						PRINTI PARIZQ PARDER PUNTOYCOMA;
