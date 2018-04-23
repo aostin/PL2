@@ -1,8 +1,0 @@
-/* imprime  */
-
-void main () {
-
-	printc("hola");
-	printc("mundo");
-
-}
