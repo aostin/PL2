@@ -1,0 +1,916 @@
+package compiler.syntax;
+
+// Declaracion de importaciones 
+//(No modificar las proporcionadas. Se pueden agregar mas)
+
+import java_cup.runtime.Symbol;
+import java.util.*;
+
+import es.uned.lsi.compiler.lexical.*;
+import es.uned.lsi.compiler.code.*;
+import es.uned.lsi.compiler.intermediate.*;
+import es.uned.lsi.compiler.semantic.*;
+import es.uned.lsi.compiler.semantic.symbol.*;
+import es.uned.lsi.compiler.semantic.type.*;
+import es.uned.lsi.compiler.syntax.*;
+
+import compiler.CompilerContext;
+import compiler.lexical.*;
+import compiler.syntax.nonTerminal.*;
+import compiler.semantic.*;
+import compiler.semantic.symbol.*;
+import compiler.semantic.type.*;
+import compiler.intermediate.*;
+import compiler.code.*;
+
+// Declaracion del codigo de usuario
+
+action code {:
+	
+	SyntaxErrorManager        syntaxErrorManager   = CompilerContext.getSyntaxErrorManager();
+	SemanticErrorManager      semanticErrorManager = CompilerContext.getSemanticErrorManager ();
+	ScopeManagerIF            scopeManager         = CompilerContext.getScopeManager ();
+	FinalCodeFactoryIF        finalCodeFactory     = CompilerContext.getFinalCodeFactory ();
+
+:}	
+
+parser code {:
+	SyntaxErrorManager        syntaxErrorManager   = CompilerContext.getSyntaxErrorManager();
+	
+	
+	public void syntax_error(Symbol symbol)
+	{
+
+	    Token token = (Token) symbol.value;
+	    syntaxErrorManager.syntaxError ("Error sintactico", token);	    
+	}
+		
+	public void unrecovered_syntax_error(java_cup.runtime.Symbol symbol)
+	{	
+	    Token token = (Token) symbol.value;
+	    syntaxErrorManager.syntaxFatalError ("Error fatal", token);
+	    
+	}
+:}
+
+// Declaracion de terminales
+
+terminal Token IDENTIFICADOR, DEFINE, IF, ELSE, ENTERO, MAIN, PRINTC, PRINTI, RETURN, VOID, WHILE, CADENA, NUMERO;
+terminal Token PARIZQ, PARDER, CORIZQ, CORDER, LLAVEIZQ, LLAVEDER, COMA, PUNTOYCOMA, MAS, MENOR, DISTINTO, AND, ASIGNACION, REFERENCIA;
+
+
+// Declaracion de no terminales
+
+
+non terminal program;
+non terminal  declar_consts;
+non terminal  declar_tipos_glo;
+non terminal  declar_variables_glo;
+non terminal  declar_funciones_glo;
+non terminal  declar_main;
+non terminal  declar_const;
+non terminal  declar_tipos;
+non terminal  declar_tipo;
+non terminal  declar_variables;
+non terminal  declar_variable;
+non terminal  rango_matriz_declar;
+non terminal  rango_matriz;
+non terminal  lista_variables_enteras;
+non terminal  lista_variables_matriz;
+non terminal  declar_funcion;
+non terminal  tipo_parametros;
+non terminal  declar_parametros;
+non terminal  lista_declar_parametros;
+non terminal  expresion;
+non terminal  asignacion;
+non terminal  expresion_sin_asign;
+non terminal  llamada_funcion;
+non terminal  lista_parametros;
+non terminal  parametros;
+non terminal  parametro;
+non terminal  retorno_funcion;
+non terminal  bloque_sentencias;
+non terminal  cuerpo_sentencias;
+non terminal  sentencias;
+non terminal  sentencia;
+non terminal  sentencia_if;
+non terminal  sentencia_while;
+non terminal  sentencia_printi;
+non terminal  sentencia_printc;
+non terminal Axiom axiom;
+non terminal Declar_const decConst;
+non terminal Declar_tipo dec_tipo;
+non terminal Lista_variables_Enteras lista_enteras;
+non terminal Lista_variables_matriz lista_matriz;
+
+		
+
+
+// Declaracion de relaciones de precedencia
+precedence right	ASIGNACION;
+precedence left		AND;
+precedence left		DISTINTO;
+precedence left 	MENOR;
+precedence left		MAS;
+precedence right	CORIZQ, CORDER;
+precedence left     PARIZQ, PARDER;
+precedence right 	ELSE;
+precedence left 	IF;
+
+// Declaracion de reglas de produccion
+start with program;
+
+program ::= 
+  {: syntaxErrorManager.syntaxInfo ("Starting parsing..."); 
+	
+	
+  :}
+  axiom:ax
+  {: 
+  		// No modificar esta estructura, aunque se pueden añadir más acciones semánticas
+  		
+  		//List intermediateCode = ax.getIntermediateCode ();
+  		//finalCodeFactory.create (intermediateCode);
+  		// En caso de no comentarse las sentencias anteriores puede generar una excepcion
+  		// en las llamadas a cupTest si el compilador no está completo. Esto es debido a que 
+  		// aún no se tendrá implementada la generación de código intermedio ni final.
+  		// Para la entrega final deberán descomentarse y usarse.
+  		
+  		syntaxErrorManager.syntaxInfo ("Parsing process ended.");
+  :};
+
+axiom ::= {:
+	
+			//Abrimos el ámbito global, creamos los tipos y los añadimos a la tabla de símbolos
+			ScopeIF ambito = scopeManager.openScope("Global");
+			
+			System.out.println("Tras abrir ambito principal "+ ambito);
+			TypeTableIF tt = ambito.getTypeTable();
+			TypeSimple entero = new TypeSimple(ambito,"Entero");
+			tt.addType("Entero",entero);
+			
+			
+		
+			
+			:}declar_consts;
+
+declar_consts ::= declar_const:c {:
+	
+			RESULT = c;
+			:}
+		  declar_consts | 
+		  declar_tipos_glo;
+					
+declar_tipos_glo ::= declar_tipo declar_tipos_glo | 
+		     declar_variables_glo;
+						
+declar_variables_glo ::= declar_variable declar_variables_glo | 
+						 	declar_funciones_glo;
+						 	
+declar_funciones_glo ::= declar_funcion declar_funciones_glo  | 
+						 declar_main ;
+
+declar_const ::= DEFINE IDENTIFICADOR:id NUMERO:valor {:
+				ScopeIF sc = scopeManager.getCurrentScope();
+				SymbolTableIF ts = sc.getSymbolTable();
+				
+				if (ts.containsSymbol(id.getLexema())){
+					semanticErrorManager.semanticFatalError("La constante:" + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+				}
+				else {
+					if (TypeSimple.rangoCorrecto(Integer.parseInt(valor.getLexema()))) {
+						SymbolConstant sConstant = new SymbolConstant(sc,id.getLexema(), scopeManager.searchType("Entero"), Integer.parseInt(valor.getLexema()));
+						Declar_const c = new Declar_const(Integer.parseInt(valor.getLexema()),"Constante");
+						ts.addSymbol(sConstant);
+						RESULT = c;
+					}
+					else
+						semanticErrorManager.semanticFatalError("Error. La constante:" + id.getLexema() + " tiene un valor fuera de rango en la linea" + id.getLine());
+					
+					
+				}
+				:}
+				PUNTOYCOMA;
+
+
+				//Comprobamos que el tipo no ha sido declarado con anterioridad y, en caso contrario, lo devolvemos 
+declar_tipo ::= ENTERO IDENTIFICADOR:id rango_matriz_declar:r1 rango_matriz_declar:r2 {:
+					ScopeIF sc = scopeManager.getCurrentScope();
+					TypeTableIF tt = sc.getTypeTable();
+					if (tt.containsType(id.getLexema()))
+						semanticErrorManager.semanticFatalError("Error. El tipo:" + id.getLexema() + " ya ha sido declarado con anterioridad en la linea " + id.getLine());
+					else {
+						TypeArray matriz = new TypeArray(sc,id.getLexema(), (int)r1,(int)r2);
+						tt.addType(id.getLexema(),matriz);
+						Declar_tipo tipo = new Declar_tipo(id.getLexema(), (int)r1, (int)r2);
+						RESULT =  tipo;
+						
+					
+
+					}
+	
+	
+	:}
+	PUNTOYCOMA ;
+
+
+
+rango_matriz_declar ::= CORIZQ NUMERO:r
+					{:
+						if (TypeSimple.rangoPositivo(Integer.parseInt(r.getLexema()))){
+							RESULT =Integer.parseInt(r.getLexema());
+						}
+						else
+							semanticErrorManager.semanticFatalError("Error. El numero " + r.getLexema() + " excede el rango permitido en  la matriz en la linea " + r.getLine());
+							
+						
+					:}
+					CORDER |	CORIZQ IDENTIFICADOR:r {:
+						
+					ScopeIF sc = scopeManager.getCurrentScope();
+					SymbolTableIF ts = sc.getSymbolTable();
+					
+					//Comprobamos que en la tabla de símbolos aparece el simbolo correspondiente. En caso afirmativo recuperamos su valor y comprobamos que no excede el rango.
+					if (ts.containsSymbol(r.getLexema())) {
+						SymbolIF c = ts.getSymbol(r.getLexema());
+						if (TypeSimple.rangoPositivo(((SymbolConstant)c).getValor())) {
+							RESULT = ((SymbolConstant)c).getValor();
+						}
+						else
+							semanticErrorManager.semanticFatalError("Error. El numero " + r.getLexema() + " excede el rango permitido en  la matriz en la linea " + r.getLine());
+					}
+					else 	semanticErrorManager.semanticFatalError("Error. No existe el identificador " + r.getLexema() + "  en la linea " + r.getLine());
+						
+					:}
+					
+					CORDER ;
+						
+						
+rango_matriz ::= CORIZQ expresion:ex CORDER:c {:
+	
+		RESULT =  ((Expresion)ex).getValor();
+
+	:};
+
+declar_variable ::= lista_variables_enteras PUNTOYCOMA  {:
+	
+	ScopeIF sc = scopeManager.getCurrentScope();
+SymbolTableIF ts = sc.getSymbolTable();
+
+	:} |	
+					lista_variables_matriz PUNTOYCOMA ;
+
+lista_variables_enteras ::=  
+							ENTERO IDENTIFICADOR:id
+							 {:
+									ScopeIF sc = scopeManager.getCurrentScope();
+									SymbolTableIF ts = sc.getSymbolTable();
+
+									if (ts.containsSymbol(id.getLexema())){
+										semanticErrorManager.semanticFatalError("Error. La variable:" + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+									}
+									else {
+										Lista_variables_Enteras listaVar = new Lista_variables_Enteras();
+										listaVar.addVariable(id.getLexema());
+										SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(), scopeManager.searchType("Entero"));
+										ts.addSymbol(sVariable);
+										RESULT = listaVar;
+									}
+		:}
+							
+							
+							|
+
+							ENTERO IDENTIFICADOR:id ASIGNACION NUMERO:valor
+							
+							 {:
+									ScopeIF sc = scopeManager.getCurrentScope();
+									SymbolTableIF ts = sc.getSymbolTable();
+
+									if (ts.containsSymbol(id.getLexema())){
+										semanticErrorManager.semanticFatalError("Error. La variable:" + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+									}
+									else {
+										if(TypeSimple.rangoCorrecto(Integer.parseInt(valor.getLexema()))){										
+											Lista_variables_Enteras listaVar = new Lista_variables_Enteras();
+											listaVar.addVariable(id.getLexema());
+											listaVar.setValor(Integer.parseInt(valor.getLexema()));
+											SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(),  scopeManager.searchType("Entero"), Integer.parseInt(valor.getLexema()));
+											ts.addSymbol(sVariable);
+										
+											RESULT = listaVar;}
+										
+										else
+											semanticErrorManager.semanticFatalError("Error. El numero " + valor.getLexema() + " excede el rango permitido para las variables en la linea " + valor.getLine());
+
+											
+									}
+		:}
+							
+							
+							
+							
+							
+							|
+							ENTERO IDENTIFICADOR:id1 ASIGNACION IDENTIFICADOR:id2
+							 {:
+									ScopeIF sc = scopeManager.getCurrentScope();
+									SymbolTableIF ts = sc.getSymbolTable();
+
+									if (ts.containsSymbol(id1.getLexema())){
+										semanticErrorManager.semanticFatalError("Error. La variable:" + id1.getLexema() + " ya ha sido declarada en la linea " + id1.getLine());
+									}
+									else {
+										//Comprobamos que exista el símbolo correspondiente
+										if (ts.containsSymbol(id2.getLexema())) {
+											SymbolIF simbolo = (ts.getSymbol(id2.getLexema()));
+											SymbolVariable sVariable;
+											Lista_variables_Enteras listaVar = new Lista_variables_Enteras();											//Comprobamos que el símbolo es del tipo adecuado
+											if(simbolo.getType() instanceof TypeSimple){	
+												//Hacemos casting según sea el tipo variable o constante. A continuación creamos el nuevo símbolo y lo introducimos a la tabla
+												
+												listaVar.addVariable(id1.getLexema());
+												if (simbolo instanceof SymbolVariable) {
+													 sVariable = new SymbolVariable(sc,id1.getLexema(), scopeManager.searchType("Entero"),((SymbolVariable)simbolo).getValor());
+
+												}
+													else {
+													 sVariable = new SymbolVariable(sc,id1.getLexema(), scopeManager.searchType("Entero"),((SymbolConstant)simbolo).getValor() );
+
+													}
+												
+												listaVar.setValor(sVariable.getValor());
+												ts.addSymbol(sVariable);
+												RESULT = listaVar;
+												
+												}
+										
+											else
+												semanticErrorManager.semanticFatalError("Error. Asignación incorrecta a la variable:" + id1.getLexema() + "en la línea" + id1.getLine() );
+
+											
+									}
+										else
+											semanticErrorManager.semanticFatalError("Error. No existe el identificador:" + id2.getLexema() + "en la línea" + id1.getLine() );
+
+										
+									
+									}
+		:}
+							
+							
+							
+							
+							
+							
+							|
+							lista_variables_enteras:var COMA IDENTIFICADOR:id
+							 {:
+								 //Análogo a la versión anterior
+									ScopeIF sc = scopeManager.getCurrentScope();
+									SymbolTableIF ts = sc.getSymbolTable();
+
+
+									if (ts.containsSymbol(id.getLexema())){
+										semanticErrorManager.semanticFatalError("Error. La variable:" + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+									}
+									else {
+										Lista_variables_Enteras listaVar = (Lista_variables_Enteras)var;
+										listaVar.addVariable(id.getLexema());
+										SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(), scopeManager.searchType("Entero"));
+
+										ts.addSymbol(sVariable);
+										RESULT = listaVar;
+									}
+		:}
+							
+							
+							
+							|
+							lista_variables_enteras:var COMA IDENTIFICADOR:id ASIGNACION NUMERO:valor {:
+								
+								//Añadimos el valor a la variable que sube y introducimos la nueva
+									
+									Lista_variables_Enteras listaVar = (Lista_variables_Enteras)var;
+									listaVar.setValor(Integer.parseInt(valor.getLexema()));
+									ScopeIF sc = scopeManager.getCurrentScope();
+									SymbolTableIF ts = sc.getSymbolTable();
+								    ts= listaVar.actualizaValores(ts);
+
+							
+
+									if (ts.containsSymbol(id.getLexema())){
+										semanticErrorManager.semanticFatalError("Error. La variable:" + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+									}
+									else {
+										if(TypeSimple.rangoCorrecto(Integer.parseInt(valor.getLexema()))){										
+											listaVar.addVariable(id.getLexema());
+											SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(), scopeManager.searchType("Entero"), Integer.parseInt(valor.getLexema()));
+
+											ts.addSymbol(sVariable);
+											RESULT = listaVar;
+											}
+										
+										else
+											semanticErrorManager.semanticFatalError("Error. El numero " + valor.getLexema() + " excede el rango permitido para las variables en la linea " + valor.getLine());
+
+											
+									};
+								
+								
+								:}
+							
+							
+							
+							|
+							lista_variables_enteras:var COMA IDENTIFICADOR:id1 ASIGNACION IDENTIFICADOR:id2
+							{:
+							
+							
+							Lista_variables_Enteras listaVar = (Lista_variables_Enteras)var;
+							ScopeIF sc = scopeManager.getCurrentScope();
+							SymbolTableIF ts = sc.getSymbolTable();
+							
+
+
+							if (ts.containsSymbol(id1.getLexema())){
+								semanticErrorManager.semanticFatalError("Error. La variable:" + id1.getLexema() + " ya ha sido declarada en la linea " + id1.getLine());
+							}
+							else {
+								//Comprobamos que exista el símbolo correspondiente
+								if (ts.containsSymbol(id2.getLexema())) {
+									SymbolIF simbolo = (ts.getSymbol(id2.getLexema()));
+									SymbolVariable sVariable;
+									listaVar.addVariable(id1.getLexema());
+									//Comprobamos que el símbolo es del tipo adecuado
+									if(simbolo.getType() instanceof TypeSimple){	
+										//Hacemos casting según sea el tipo variable o constante. A continuación creamos el nuevo símbolo y lo introducimos a la tabla
+										if (simbolo instanceof SymbolVariable) {
+											
+											 
+											 sVariable = new SymbolVariable(sc,id1.getLexema(), scopeManager.searchType("Entero"),((SymbolVariable)simbolo).getValor() );
+
+										}
+											else {
+												sVariable = new SymbolVariable(sc,id1.getLexema(), scopeManager.searchType("Entero"),((SymbolConstant)simbolo).getValor() );
+
+											}
+										
+										listaVar.setValor(sVariable.getValor());
+									
+										ts.addSymbol(sVariable);
+										ts= listaVar.actualizaValores(ts);
+
+									    
+
+										RESULT = listaVar;
+										
+										}
+								
+									else
+										semanticErrorManager.semanticFatalError("Error. Asignación incorrecta a la variable:" + id1.getLexema() + "en la línea" + id1.getLine() );
+
+									
+							}
+								else
+									semanticErrorManager.semanticFatalError("Error. No existe el identificador:" + id2.getLexema() + "en la línea" + id1.getLine() );
+
+								
+							
+							}
+								
+								
+								
+								
+							:}
+							
+							
+							
+							;
+							
+lista_variables_matriz ::= IDENTIFICADOR:id1 IDENTIFICADOR:id2  {:
+	
+	ScopeIF sc = scopeManager.getCurrentScope();
+	SymbolTableIF ts = sc.getSymbolTable();
+	TypeTableIF tt = sc.getTypeTable();
+
+	
+	if (ts.containsSymbol(id2.getLexema())){
+		semanticErrorManager.semanticFatalError("Error. La matriz " + id2.getLexema() + " ya ha sido declarada en la linea " + id2.getLine());
+	}
+	else {
+		
+			if (tt.containsType(id1.getLexema())) {
+				TypeArray tipo = (TypeArray)tt.getType(id1.getLexema());
+				Lista_variables_matriz listaMat = new Lista_variables_matriz(tipo.getR1(), tipo.getR2(), id1.getLexema());
+				listaMat.addMatriz(id2.getLexema());
+				SymbolMatrix mat = new SymbolMatrix(sc,id2.getLexema(),tipo,tipo.getR1(),tipo.getR2());
+				ts.addSymbol(mat);
+				RESULT = listaMat;
+				
+			}
+		
+		}
+
+
+:}
+
+
+
+|							
+lista_variables_matriz:matrices COMA IDENTIFICADOR:id {:
+	
+	Lista_variables_matriz listaMat = (Lista_variables_matriz) matrices;
+	ScopeIF sc = scopeManager.getCurrentScope();
+	SymbolTableIF ts = sc.getSymbolTable();
+	TypeTableIF tt = sc.getTypeTable();
+
+	
+	if (ts.containsSymbol(id.getLexema())){
+		semanticErrorManager.semanticFatalError("Error. La matriz " + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+	}
+
+	else {
+		
+		if (tt.containsType(listaMat.getTypeName())) {
+			TypeArray tipo = (TypeArray)tt.getType(listaMat.getTypeName());
+			listaMat.addMatriz(id.getLexema());
+			SymbolMatrix mat = new SymbolMatrix(sc,id.getLexema(),tipo,tipo.getR1(),tipo.getR2());
+			ts.addSymbol(mat);
+			System.out.println(ts);
+				
+			}
+		
+		}
+
+
+:}
+							
+							
+							;
+
+declar_funcion ::= ENTERO IDENTIFICADOR declar_parametros bloque_sentencias |
+					VOID IDENTIFICADOR declar_parametros bloque_sentencias ;
+
+declar_main ::= VOID MAIN PARIZQ PARDER bloque_sentencias;
+
+declar_parametros ::= PARIZQ PARDER  |
+					  PARIZQ lista_declar_parametros PARDER ;
+				
+lista_declar_parametros ::= tipo_parametros REFERENCIA IDENTIFICADOR |
+					 		lista_declar_parametros COMA tipo_parametros REFERENCIA IDENTIFICADOR ;
+					
+tipo_parametros ::= ENTERO | IDENTIFICADOR ;
+
+bloque_sentencias ::= LLAVEIZQ
+{:
+	ScopeIF ambito = scopeManager.openScope();
+	System.out.println("Tras abrir bloque vacio"+ ambito);
+	scopeManager.closeScope();ambito = scopeManager.getCurrentScope();
+	System.out.println("Tras cerrar bloque vacio"+ ambito);
+	:}
+
+	LLAVEDER  |
+	LLAVEIZQ 
+	
+{:
+	ScopeIF ambito = scopeManager.openScope();
+	System.out.println("Tras abrir bloque NO vacio"+ ambito);
+	:} 
+	cuerpo_sentencias LLAVEDER 
+{:
+		scopeManager.closeScope();
+		ScopeIF ambito = scopeManager.getCurrentScope();
+		System.out.println("Tras cerrar bloque NO vacio"+ ambito);
+		:};
+						
+cuerpo_sentencias ::= declar_tipos ;	
+
+declar_tipos ::= declar_tipo declar_tipos  | 
+					declar_tipo |
+					declar_variables ;
+					
+declar_variables ::= declar_variable declar_variables  | 
+						declar_variable |
+						sentencias ;
+
+sentencias ::= bloque_sentencias |
+			bloque_sentencias sentencias |
+			sentencia  |
+			sentencia sentencias ;
+						
+sentencia ::= sentencia_if  |
+			sentencia_while  |
+			sentencia_printi  |
+			sentencia_printc  |
+			asignacion PUNTOYCOMA  |
+			llamada_funcion PUNTOYCOMA  |
+			retorno_funcion  ;
+			
+			
+asignacion ::= IDENTIFICADOR:id ASIGNACION expresion_sin_asign:ex
+				{: 	
+					ScopeIF sc = scopeManager.getCurrentScope();
+					SymbolTableIF ts = sc.getSymbolTable();
+						if (scopeManager.containsSymbol(id.getLexema())) {
+							SymbolIF simbolo = scopeManager.searchSymbol(id.getLexema());
+							if (((simbolo.getType()).getName()).equals("Entero")) {
+								if (simbolo instanceof SymbolVariable) {
+									SymbolVariable sVariable = (SymbolVariable)simbolo;
+									sVariable.setValor(((Expresion)ex).getValor());
+									ts.addSymbol(sVariable);
+									ExpresionId exp1 = new ExpresionId(((Expresion)ex).getValor(),id.getLexema());
+									ExpresionCompuesta expCompuesta = new ExpresionCompuesta(((Expresion)ex).getValor(), "tipoAsignacion", exp1, (Expresion)ex);
+									
+									System.out.println(ts);
+									RESULT = expCompuesta; 
+								}
+
+								else {
+									semanticErrorManager.semanticFatalError("Error. No se puede asignar un valor a la constante " + id.getLexema() + " en la linea " + id.getLine());
+
+								}
+							}
+							else
+								semanticErrorManager.semanticFatalError("Error. Identificador no válido " + id.getLexema() + " en la linea " + id.getLine());
+			
+	
+
+						}
+					
+						:}
+
+|
+ 					IDENTIFICADOR:id rango_matriz:r1 rango_matriz:r2 ASIGNACION expresion_sin_asign:ex {:
+ 						
+ 						ScopeIF sc = scopeManager.getCurrentScope();
+ 						SymbolTableIF ts = sc.getSymbolTable();
+ 						if (scopeManager.containsSymbol(id.getLexema())) {
+ 							SymbolMatrix sMatrix = (SymbolMatrix)scopeManager.searchSymbol(id.getLexema());
+ 							if (sMatrix.rangoCorrecto((int)r1,(int)r2)) {
+ 								sMatrix.setValor((int)r1,(int)r2, ((Expresion)ex).getValor());
+ 								ts.addSymbol(sMatrix);
+ 								ExpresionMatriz exp1 = new ExpresionMatriz(((Expresion)ex).getValor(),id.getLexema(), (int)r1,(int)r2);
+								ExpresionCompuesta expCompuesta = new ExpresionCompuesta(((Expresion)ex).getValor(), "tipoAsignacion", exp1, (Expresion)ex);
+								
+ 								
+ 							}
+ 							else
+ 								semanticErrorManager.semanticFatalError("Error. La matriz " + id.getLexema() + " esta fuera de rango en la linea " + id.getLine());
+ 							
+ 						}	
+ 						
+ 						else {
+ 							semanticErrorManager.semanticFatalError("Error. La matriz " + id.getLexema() + " no ha sido declarada en la linea " + id.getLine());
+ 						}
+ 						
+ 						
+ 						:};
+
+expresion_sin_asign ::= NUMERO:num {:
+			if (TypeSimple.rangoCorrecto(Integer.parseInt(num.getLexema()))){
+				Expresion exp = new Expresion(Integer.parseInt(num.getLexema()),"tipoEntero");
+				RESULT= exp;
+				}
+			else
+				semanticErrorManager.semanticFatalError("Error. El número " + num.getLexema() + " esta fuera de rango en la linea " + num.getLine());
+
+				
+				
+	:}
+
+|
+						IDENTIFICADOR:id {:
+							ScopeIF sc = scopeManager.getCurrentScope();
+ 							SymbolTableIF ts = sc.getSymbolTable();
+ 						if (scopeManager.containsSymbol(id.getLexema())) {
+ 							SymbolIF simbolo = scopeManager.searchSymbol(id.getLexema());
+ 							if (((simbolo.getType()).getName()).equals("Entero")) {
+ 								if (simbolo instanceof SymbolVariable) {
+ 									 ExpresionId expId = new ExpresionId(((SymbolVariable)simbolo).getValor(),id.getLexema());
+ 									 RESULT = expId;
+ 								}
+
+								else {
+									 ExpresionId expId = new ExpresionId(((SymbolConstant)simbolo).getValor(),id.getLexema());
+ 									 RESULT = expId;
+
+								}
+ 							}
+ 							else
+ 									semanticErrorManager.semanticFatalError("Error. Identificador no válido " + id.getLexema() + " en la linea " + id.getLine());
+ 									
+								
+							
+ 						}
+ 						
+ 						else
+ 							semanticErrorManager.semanticFatalError("Error. Identificador " + id.getLexema() + " no encontrado en la linea " + id.getLine());
+							:}
+						
+						|
+						IDENTIFICADOR:id rango_matriz:r1 rango_matriz:r2 {:
+							ScopeIF sc = scopeManager.getCurrentScope();
+ 							SymbolTableIF ts = sc.getSymbolTable();
+ 							if (scopeManager.containsSymbol(id.getLexema())) {
+ 								SymbolMatrix sMatrix = (SymbolMatrix)scopeManager.searchSymbol(id.getLexema());
+ 								if (sMatrix.rangoCorrecto((int)r1,(int)r2)) {
+ 									if (sMatrix.getDefinido((int)r1,(int)r2)) {
+ 										ExpresionMatriz expMatriz = new ExpresionMatriz(sMatrix.getValor((int)r1,(int)r2),id.getLexema(),(int)r1,(int)r2);
+ 										RESULT= expMatriz;
+ 									}
+ 									else
+ 	 									semanticErrorManager.semanticFatalError("Error. La posicion [" + (int)r1 + "][" + (int)r2 + "] de la matriz "+ id.getLexema() + " no esta definida en la linea " + id.getLine());
+
+ 									
+ 								
+ 								}
+ 								else
+ 									semanticErrorManager.semanticFatalError("Error. La matriz " + id.getLexema() + " esta fuera de rango en la linea " + id.getLine());
+ 							
+ 							}	
+ 						
+ 							else {
+ 								semanticErrorManager.semanticFatalError("Error. La matriz " + id.getLexema() + " no ha sido declarada en la linea " + id.getLine());
+ 							}
+ 						
+							
+							
+							:}
+						
+						
+						
+						|
+						llamada_funcion |
+						expresion_sin_asign:ex1 MAS:mas expresion_sin_asign:ex2 {:
+							Expresion exp1 = (Expresion)ex1;
+ 							Expresion exp2 = (Expresion)ex2;
+							ExpresionCompuesta expCompuesta = new ExpresionCompuesta(exp1.getValor()+exp2.getValor(),"tipoCompuesto", (Expresion)ex1, (Expresion)ex2);
+ 							
+								
+								RESULT= expCompuesta;
+					
+							
+							
+							:}
+							|
+						}
+						expresion_sin_asign:ex1 MENOR expresion_sin_asign:ex2 {:
+						
+							Expresion exp1 = (Expresion)ex1;
+							Expresion exp2 = (Expresion)ex2;
+							int valor;
+							if (exp1.getValor() < exp2.getValor())
+								valor=1;
+							else
+								valor=0;
+							ExpresionCompuesta expCompuesta = new ExpresionCompuesta(valor,"tipoCompuesto", (Expresion)ex1, (Expresion)ex2);
+							
+							
+							RESULT = expCompuesta;
+						
+							:}|
+						}
+						expresion_sin_asign:ex1 DISTINTO expresion_sin_asign:ex2 {:
+							
+							Expresion exp1 = (Expresion)ex1;
+							Expresion exp2 = (Expresion)ex2;
+							int valor;
+							if (exp1.getValor() != exp2.getValor())
+								valor=1;
+							else
+								valor=0;
+							ExpresionCompuesta expCompuesta = new ExpresionCompuesta(valor,"tipoCompuesto", (Expresion)ex1,(Expresion)ex2);
+							
+						
+							RESULT = expCompuesta;
+						
+							
+							
+							:}|
+						}
+						expresion_sin_asign:ex1 AND:a expresion_sin_asign:ex2 {:
+						
+							Expresion exp1 = (Expresion)ex1;
+							Expresion exp2 = (Expresion)ex2;
+							int valor;
+							boolean valor1=false;
+							boolean valor2=false;
+							
+							if (exp1.getValor()==1)
+								valor1 = true;
+							else {
+								if (exp1.getValor()==0)
+									valor1 = false;
+								else
+									semanticErrorManager.semanticFatalError("Error. El valor " + exp1.getValor() + " no es un valor lógico en la linea " + a.getLine());
+								}
+							
+							if (exp2.getValor()==1)
+								valor2 = true;
+							else {
+								if (exp2.getValor()==0)
+									valor2 = false;
+								else
+									semanticErrorManager.semanticFatalError("Error. El valor " + exp2.getValor() + " no es un valor lógico en la linea " + a.getLine());
+								}
+							
+							
+							if (valor1 && valor2)
+								valor=1;
+							else
+								valor=0;
+							
+							ExpresionCompuesta expCompuesta = new ExpresionCompuesta(valor, "tipoCompuesto",(Expresion) ex1,(Expresion) ex2);
+						
+					
+							RESULT = expCompuesta;
+							
+							:}|
+						}
+						PARIZQ expresion:exp PARDER {:
+							RESULT= exp;
+							:};					
+						}
+
+expresion ::= expresion_sin_asign:ex {: 
+		
+			RESULT=ex;
+		
+			
+	:}|
+				asignacion:asig {:
+					RESULT=asig;
+					
+					:};
+}
+				
+llamada_funcion ::= IDENTIFICADOR lista_parametros ;
+
+
+lista_parametros ::= PARIZQ PARDER  |
+					 PARIZQ parametros PARDER;
+					 
+parametros ::= parametro |
+				parametros COMA parametro;
+				
+parametro ::= IDENTIFICADOR  |
+				IDENTIFICADOR rango_matriz rango_matriz ;
+
+sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:s {:
+			Expresion expresion = (Expresion)ex;
+			
+			if (expresion.getValor()==0 || expresion.getValor()==1) {
+				SentenciaIF sIF = new SentenciaIF((Expresion)ex, false);
+				sIF.addS1((Sentencia)s);
+				RESULT = sIF;
+			}
+			else
+				semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+
+	
+	
+	:}|
+}
+					IF PARIZQ expresion:ex PARDER bloque_sentencias:s
+					{:
+						
+					if (expresion.getValor()==0 || expresion.getValor()==1) {
+	
+						SentenciaIF sIF = new SentenciaIF((Expresion)ex, false);
+						sIF.addS1((Bloque_sentencias)s);
+						RESULT = sIF;
+					}
+					
+					else
+						semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+				
+				:}
+					
+					
+					|
+					IF PARIZQ expresion:ex PARDER sentencia:s1 ELSE sentencia:s2  {:
+						
+						SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
+						sIF.addS1((Sentencia)s1);
+						sIF.addS2((Sentencia)s2);
+						RESULT = sIF;
+				
+				
+				:}  |
+					IF PARIZQ expresion PARDER sentencia ELSE bloque_sentencias  |
+					IF PARIZQ expresion PARDER bloque_sentencias ELSE sentencia  |
+					IF PARIZQ expresion PARDER bloque_sentencias ELSE bloque_sentencias;
+
+sentencia_while ::= WHILE PARIZQ expresion PARDER sentencia |			
+					WHILE PARIZQ expresion PARDER bloque_sentencias;
+					
+sentencia_printi ::= PRINTI PARIZQ expresion PARDER PUNTOYCOMA |
+						PRINTI PARIZQ PARDER PUNTOYCOMA;
+
+sentencia_printc ::= PRINTC PARIZQ CADENA PARDER PUNTOYCOMA;
+
+retorno_funcion ::= RETURN expresion PUNTOYCOMA  |
+					RETURN PUNTOYCOMA;
+					
+					

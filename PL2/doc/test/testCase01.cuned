@@ -1,0 +1,24 @@
+/* vacio  */
+
+#define dos 23;
+#define uno 1;
+
+int matriz1[dos][2];
+int matriz2[3][1];
+
+int a=2;
+int f,g,o=a;
+int i,x,z=34;
+int b=uno;
+matriz2 mat2, mat3;
+void main() {
+mat2[2][0]=dos;
+mat2[0][0]=mat2[2][0];
+x=mat2[2][0];
+
+	
+	if(a<10)
+		x=3;
+
+
+}
