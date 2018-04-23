@@ -857,12 +857,12 @@ parametros ::= parametro |
 parametro ::= IDENTIFICADOR  |
 				IDENTIFICADOR rango_matriz rango_matriz ;
 
-sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:s {:
+sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 			Expresion expresion = (Expresion)ex;
 			
 			if (expresion.getValor()==0 || expresion.getValor()==1) {
 				SentenciaIF sIF = new SentenciaIF((Expresion)ex, false);
-				sIF.addS1((Sentencia)s);
+				sIF.addS1((Bloque_sentencias)sen);
 				RESULT = sIF;
 			}
 			else
@@ -872,9 +872,10 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:s {:
 	
 	:}|
 }
-					IF PARIZQ expresion:ex PARDER bloque_sentencias:s
+					IF PARIZQ:p expresion:ex PARDER bloque_sentencias:s
 					{:
 						
+					Expresion expresion = (Expresion)ex;	
 					if (expresion.getValor()==0 || expresion.getValor()==1) {
 	
 						SentenciaIF sIF = new SentenciaIF((Expresion)ex, false);
@@ -889,18 +890,85 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:s {:
 					
 					
 					|
-					IF PARIZQ expresion:ex PARDER sentencia:s1 ELSE sentencia:s2  {:
+					IF PARIZQ:p expresion:ex PARDER sentencia:s1 ELSE sentencia:s2  {:
 						
-						SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
-						sIF.addS1((Sentencia)s1);
-						sIF.addS2((Sentencia)s2);
-						RESULT = sIF;
+						Expresion expresion = (Expresion)ex;
+						if (expresion.getValor()==0 || expresion.getValor()==1) {
+							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
+							sIF.addS1((Bloque_sentencias)s1);
+							sIF.addS2((Bloque_sentencias)s2);
+							RESULT = sIF;
+						}
+	
+						else
+							semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+
 				
 				
 				:}  |
-					IF PARIZQ expresion PARDER sentencia ELSE bloque_sentencias  |
-					IF PARIZQ expresion PARDER bloque_sentencias ELSE sentencia  |
-					IF PARIZQ expresion PARDER bloque_sentencias ELSE bloque_sentencias;
+					IF PARIZQ:p expresion:ex PARDER sentencia:sen ELSE bloque_sentencias:bloque
+					{:
+						Expresion expresion = (Expresion)ex;
+				
+						if (expresion.getValor()==0 || expresion.getValor()==1) {
+							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
+							sIF.addS1((Bloque_sentencias)sen);
+							sIF.addS2((Bloque_sentencias)bloque);
+							RESULT = sIF;
+					}
+
+					else
+						semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+						
+						
+						:}
+					}
+					
+					
+					|
+					IF PARIZQ:p expresion:ex PARDER bloque_sentencias:bloque ELSE sentencia:sen
+					{:
+						Expresion expresion = (Expresion)ex;
+					
+						if (expresion.getValor()==0 || expresion.getValor()==1) {
+							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
+							sIF.addS1((Bloque_sentencias)bloque);
+							sIF.addS2((Bloque_sentencias)sen);
+							RESULT = sIF;
+				}
+
+				else
+					semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+					
+						
+						
+						
+						:}
+					
+					
+					|
+					IF PARIZQ:p expresion:ex PARDER bloque_sentencias:bloque1 ELSE bloque_sentencias:bloque2
+					{:
+						Expresion expresion = (Expresion)ex;
+					
+						if (expresion.getValor()==0 || expresion.getValor()==1) {
+							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
+							sIF.addS1((Bloque_sentencias)bloque1);
+							sIF.addS2((Bloque_sentencias)bloque1);
+							RESULT = sIF;
+				}
+
+				else
+					semanticErrorManager.semanticFatalError("Error. Se esperaba una expresion logica en la linea " + p.getLine());
+					
+						
+						
+						
+						:}
+					
+					
+					
+					;
 
 sentencia_while ::= WHILE PARIZQ expresion PARDER sentencia |			
 					WHILE PARIZQ expresion PARDER bloque_sentencias;
