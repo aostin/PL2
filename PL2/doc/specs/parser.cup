@@ -549,18 +549,73 @@ lista_variables_matriz:matrices COMA IDENTIFICADOR:id {:
 							
 							;
 
-declar_funcion ::= ENTERO IDENTIFICADOR declar_parametros bloque_sentencias |
+declar_funcion ::= ENTERO IDENTIFICADOR:id declar_parametros:parametros {: 
+	ScopeIF sc = scopeManager.getCurrentScope();
+SymbolTableIF ts = sc.getSymbolTable();
+	
+	System.out.println("Estoy en el scope interno..." + sc);
+;:} bloque_sentencias:bloque	{:
+	
+					ScopeIF sc = scopeManager.getCurrentScope();
+					SymbolTableIF ts = sc.getSymbolTable();
+					System.out.println("Estoy en el scope interno..." + sc);
+					if (scopeManager.containsSymbol(id.getLexema())) {
+						semanticErrorManager.semanticFatalError("La funcion " + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+
+					}
+	
+					:} |
 					VOID IDENTIFICADOR declar_parametros bloque_sentencias ;
 
 declar_main ::= VOID MAIN PARIZQ PARDER bloque_sentencias;
 
 declar_parametros ::= PARIZQ PARDER  |
-					  PARIZQ lista_declar_parametros PARDER ;
+					  PARIZQ lista_declar_parametros:listaTipos {:
+						  System.out.println(((ArrayList<TypeIF>)listaTipos).size());
+						  
+						  :}
+					  
+					  
+					  PARDER ;
 				
-lista_declar_parametros ::= tipo_parametros REFERENCIA IDENTIFICADOR |
-					 		lista_declar_parametros COMA tipo_parametros REFERENCIA IDENTIFICADOR ;
+lista_declar_parametros ::= tipo_parametros:tipo  REFERENCIA IDENTIFICADOR {:
+								
+								ArrayList<TypeIF> listaTipos = new ArrayList<TypeIF>();
+								listaTipos.add((TypeIF)tipo);
+								RESULT = listaTipos;
+								:}
+
+
+								|
+					 		lista_declar_parametros:lista COMA tipo_parametros:tipo REFERENCIA IDENTIFICADOR {:
+								ArrayList<TypeIF> listaTipos;
+								
+								if (lista == null)
+									listaTipos = new ArrayList<TypeIF>();
+								else
+										listaTipos = (ArrayList<TypeIF>) lista;
+								listaTipos.add((TypeIF)tipo);
+								
+								RESULT = listaTipos;
+					 			
+					 			:} ;
 					
-tipo_parametros ::= ENTERO | IDENTIFICADOR ;
+tipo_parametros ::= ENTERO {:
+			ScopeIF sc = scopeManager.getCurrentScope();
+			TypeIF tipo = scopeManager.searchType("Entero");
+
+			RESULT = tipo;
+	
+			:}
+
+
+
+| IDENTIFICADOR:id {: 
+	
+	semanticErrorManager.semanticFatalError("Error. No se pueden pasar tipos estructurados como parametros en la linea  " + id.getLine());
+
+	
+	:} ;
 
 bloque_sentencias ::= LLAVEIZQ
 {:
@@ -1008,12 +1063,33 @@ sentencia_while ::= WHILE PARIZQ:p expresion:ex PARDER sentencia:sen
 					
 					:};
 					
-sentencia_printi ::= PRINTI PARIZQ expresion PARDER PUNTOYCOMA |
+sentencia_printi ::= PRINTI PARIZQ expresion:ex PARDER PUNTOYCOMA {:
+						Expresion expresion = (Expresion)ex;
+						Sentencia_simple simple = new Sentencia_simple();
+						simple.setEx(expresion);
+						simple.setTipo("printi");
+						RESULT = simple;
+	
+	:} |
 						PRINTI PARIZQ PARDER PUNTOYCOMA;
 
-sentencia_printc ::= PRINTC PARIZQ CADENA PARDER PUNTOYCOMA;
+sentencia_printc ::= PRINTC PARIZQ CADENA:cadena PARDER PUNTOYCOMA {: 
+					Sentencia_printc printc = new Sentencia_printc(cadena.getLexema());
+					RESULT = printc;
+	
+	:};
 
-retorno_funcion ::= RETURN expresion PUNTOYCOMA  |
+retorno_funcion ::= RETURN expresion:ex PUNTOYCOMA {: 
+	
+					Expresion expresion = (Expresion)ex;
+					Sentencia_simple simple = new Sentencia_simple();
+					simple.setEx(expresion);
+					simple.setTipo("return");
+					RESULT = simple;
+						:}
+
+
+|
 					RETURN PUNTOYCOMA;
 					
 					
