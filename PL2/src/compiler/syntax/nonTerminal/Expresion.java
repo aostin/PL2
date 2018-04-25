@@ -1,6 +1,6 @@
 package compiler.syntax.nonTerminal;
 
-public class Expresion {
+public class Expresion extends Sentencia {
 
 	int valor;
 	String tipo;

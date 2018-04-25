@@ -33,4 +33,5 @@ public class Declar_variable {
 			listaEnteras.add(lista);
 		}
 		
+		
 }

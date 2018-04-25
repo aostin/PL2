@@ -1,6 +1,12 @@
 package compiler.syntax.nonTerminal;
 import java.util.ArrayList;
 
+import es.uned.lsi.compiler.semantic.symbol.*;
+import es.uned.lsi.compiler.semantic.*;
+import compiler.semantic.symbol.*;
+
+
+
 public class Bloque_sentencias extends Sentencia {
 
 	
@@ -27,5 +33,20 @@ public class Bloque_sentencias extends Sentencia {
 	
 	public ArrayList<Sentencia> getListaSentencias() {
 		return listaSentencias;
+	}
+	
+	public SymbolTableIF introducirTabla(ScopeIF sc) {
+		SymbolTableIF ts = sc.getSymbolTable();
+		ArrayList<Lista_variables_Enteras> listaEnteras = dec_Variable.getListaEnteras();
+		
+		for (Lista_variables_Enteras lista: listaEnteras ){
+			ArrayList<String> variables = lista.getVariables();
+			for (String var: variables) {
+				SymbolVariable sVar = new SymbolVariable(sc,var,lista.getType(),lista.getValor());
+				ts.addSymbol(sVar);
+			}
+			
+		}
+		return ts;
 	}
 }

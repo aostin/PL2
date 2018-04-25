@@ -11,7 +11,7 @@ int f,g,o=a;
 int i,x,z=34;
 int b=uno;
 matriz2 mat2, mat3;
-int sumar(int &x,int &y) {
+int sumar( int &x,int &y) {
 	
 	return a + a;
 	
@@ -20,17 +20,15 @@ int sumar(int &x,int &y) {
 
 
 void main() {
-mat2[2][0]=dos;
-mat2[0][0]=mat2[2][0];
-x=mat2[2][0];
 
-	
 	if(a<10) {
 	
 		x=3;
-}
+}	
+
 
 printi(a=2);
+
 
 
 }

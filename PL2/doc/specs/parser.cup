@@ -271,7 +271,7 @@ lista_variables_enteras ::=
 									}
 									else {
 										Lista_variables_Enteras listaVar = new Lista_variables_Enteras();
-										listaVar.addVariable(id.getLexema());
+										listaVar.addVariable(id.getLexema(),scopeManager.searchType("Entero"));
 										SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(), scopeManager.searchType("Entero"));
 										ts.addSymbol(sVariable);
 										RESULT = listaVar;
@@ -293,7 +293,7 @@ lista_variables_enteras ::=
 									else {
 										if(TypeSimple.rangoCorrecto(Integer.parseInt(valor.getLexema()))){										
 											Lista_variables_Enteras listaVar = new Lista_variables_Enteras();
-											listaVar.addVariable(id.getLexema());
+											listaVar.addVariable(id.getLexema(),scopeManager.searchType("Entero"));
 											listaVar.setValor(Integer.parseInt(valor.getLexema()));
 											SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(),  scopeManager.searchType("Entero"), Integer.parseInt(valor.getLexema()));
 											ts.addSymbol(sVariable);
@@ -329,7 +329,7 @@ lista_variables_enteras ::=
 											if(simbolo.getType() instanceof TypeSimple){	
 												//Hacemos casting según sea el tipo variable o constante. A continuación creamos el nuevo símbolo y lo introducimos a la tabla
 												
-												listaVar.addVariable(id1.getLexema());
+												listaVar.addVariable(id1.getLexema(),scopeManager.searchType("Entero"));
 												if (simbolo instanceof SymbolVariable) {
 													 sVariable = new SymbolVariable(sc,id1.getLexema(), scopeManager.searchType("Entero"),((SymbolVariable)simbolo).getValor());
 
@@ -376,7 +376,7 @@ lista_variables_enteras ::=
 									}
 									else {
 										Lista_variables_Enteras listaVar = (Lista_variables_Enteras)var;
-										listaVar.addVariable(id.getLexema());
+										listaVar.addVariable(id.getLexema(),scopeManager.searchType("Entero"));
 										SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(), scopeManager.searchType("Entero"));
 
 										ts.addSymbol(sVariable);
@@ -404,7 +404,7 @@ lista_variables_enteras ::=
 									}
 									else {
 										if(TypeSimple.rangoCorrecto(Integer.parseInt(valor.getLexema()))){										
-											listaVar.addVariable(id.getLexema());
+											listaVar.addVariable(id.getLexema(),scopeManager.searchType("Entero"));
 											SymbolVariable sVariable = new SymbolVariable(sc,id.getLexema(), scopeManager.searchType("Entero"), Integer.parseInt(valor.getLexema()));
 
 											ts.addSymbol(sVariable);
@@ -441,7 +441,7 @@ lista_variables_enteras ::=
 								if (ts.containsSymbol(id2.getLexema())) {
 									SymbolIF simbolo = (ts.getSymbol(id2.getLexema()));
 									SymbolVariable sVariable;
-									listaVar.addVariable(id1.getLexema());
+									listaVar.addVariable(id1.getLexema(),scopeManager.searchType("Entero"));
 									//Comprobamos que el símbolo es del tipo adecuado
 									if(simbolo.getType() instanceof TypeSimple){	
 										//Hacemos casting según sea el tipo variable o constante. A continuación creamos el nuevo símbolo y lo introducimos a la tabla
@@ -549,21 +549,25 @@ lista_variables_matriz:matrices COMA IDENTIFICADOR:id {:
 							
 							;
 
-declar_funcion ::= ENTERO IDENTIFICADOR:id declar_parametros:parametros {: 
-	ScopeIF sc = scopeManager.getCurrentScope();
-SymbolTableIF ts = sc.getSymbolTable();
+declar_funcion ::= ENTERO IDENTIFICADOR:id {:
+					
+					ScopeIF sc = scopeManager.openScope("Funcion");
+					System.out.println("Estoy en el scope de la funcion..." + sc);
+
 	
-	System.out.println("Estoy en el scope interno..." + sc);
-;:} bloque_sentencias:bloque	{:
-	
-					ScopeIF sc = scopeManager.getCurrentScope();
-					SymbolTableIF ts = sc.getSymbolTable();
-					System.out.println("Estoy en el scope interno..." + sc);
+					:} declar_parametros:parametros bloque_sentencias:bloque	{:
+						//Bloque_sentencias bq = (Bloque_sentencias)bloque;
+						ScopeIF sc = scopeManager.getCurrentScope();
+						//bq.introducirTabla(sc);
+						
+						System.out.println("Estoy en el scope ..." + sc);
+						SymbolTableIF ts = sc.getSymbolTable();
 					if (scopeManager.containsSymbol(id.getLexema())) {
 						semanticErrorManager.semanticFatalError("La funcion " + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
 
 					}
 	
+					scopeManager.closeScope();
 					:} |
 					VOID IDENTIFICADOR declar_parametros bloque_sentencias ;
 
@@ -639,7 +643,9 @@ bloque_sentencias ::= LLAVEIZQ
 		System.out.println("Tras cerrar bloque NO vacio"+ ambito);
 		:};
 						
-cuerpo_sentencias ::= declar_tipos ;	
+cuerpo_sentencias ::= declar_tipos:declar {:
+		RESULT = declar;
+			:} ;	
 
 declar_tipos ::= declar_tipo declar_tipos  | 
 					declar_tipo |
@@ -649,18 +655,57 @@ declar_variables ::= declar_variable declar_variables  |
 						declar_variable |
 						sentencias ;
 
-sentencias ::= bloque_sentencias |
-			bloque_sentencias sentencias |
-			sentencia  |
-			sentencia sentencias ;
+sentencias ::= bloque_sentencias:bloque {:
+			RESULT = bloque;
+	:} |
+			bloque_sentencias:bloque sentencias:sen {:
+				Bloque_sentencias bloque_sen;
+				if (bloque ==null)
+					bloque_sen = new Bloque_sentencias();
+				else
+					bloque_sen = (Bloque_sentencias) bloque;
+				
+				bloque_sen.addSentencia((Sentencia)sen);
+				
+				:} |
+			sentencia:sen {:
+				RESULT = sen;
+				:}  |
+			sentencia:sen1 sentencias:sen2  {:
+				Bloque_sentencias bloque_sen = new Bloque_sentencias();		
+				bloque_sen.addSentencia((Sentencia)sen1);
+				bloque_sen.addSentencia((Sentencia)sen2);
+				
+				:} ;
 						
-sentencia ::= sentencia_if  |
-			sentencia_while  |
-			sentencia_printi  |
-			sentencia_printc  |
-			asignacion PUNTOYCOMA  |
-			llamada_funcion PUNTOYCOMA  |
-			retorno_funcion  ;
+sentencia ::= sentencia_if:sen {:
+		RESULT = sen;
+	
+	:} |
+			sentencia_while:sen {:
+				RESULT = sen;
+			
+			:}   |
+			sentencia_printi:sen {:
+				RESULT = sen;
+			
+			:}   |
+			sentencia_printc:sen {:
+				RESULT = sen;
+			
+			:}   |
+			asignacion PUNTOYCOMA:sen {:
+				RESULT = sen;
+			
+			:}   |
+			llamada_funcion PUNTOYCOMA:sen {:
+				RESULT = sen;
+			
+			:}   |
+			retorno_funcion:sen {:
+				RESULT = sen;
+			
+			:}   ;
 			
 			
 asignacion ::= IDENTIFICADOR:id ASIGNACION expresion_sin_asign:ex
