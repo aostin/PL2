@@ -12,7 +12,8 @@ int i,x,z=34;
 int b=uno;
 matriz2 mat2, mat3;
 int sumar( int &x,int &y) {
-	
+	x=3;
+	x=4;
 	return a + a;
 	
 	}

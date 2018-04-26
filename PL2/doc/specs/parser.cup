@@ -538,7 +538,7 @@ lista_variables_matriz:matrices COMA IDENTIFICADOR:id {:
 			SymbolMatrix mat = new SymbolMatrix(sc,id.getLexema(),tipo,tipo.getR1(),tipo.getR2());
 			ts.addSymbol(mat);
 			System.out.println(ts);
-				
+			RESULT = listaMat;
 			}
 		
 		}
@@ -553,19 +553,21 @@ declar_funcion ::= ENTERO IDENTIFICADOR:id {:
 					
 					ScopeIF sc = scopeManager.openScope("Funcion");
 					System.out.println("Estoy en el scope de la funcion..." + sc);
-
-	
-					:} declar_parametros:parametros bloque_sentencias:bloque	{:
-						//Bloque_sentencias bq = (Bloque_sentencias)bloque;
-						ScopeIF sc = scopeManager.getCurrentScope();
-						//bq.introducirTabla(sc);
-						
-						System.out.println("Estoy en el scope ..." + sc);
-						SymbolTableIF ts = sc.getSymbolTable();
+					SymbolTableIF ts = sc.getSymbolTable();
 					if (scopeManager.containsSymbol(id.getLexema())) {
 						semanticErrorManager.semanticFatalError("La funcion " + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
 
 					}
+					
+	
+					:} declar_parametros:parametros bloque_sentencias:bloque	{:
+						Bloque_sentencias bq = (Bloque_sentencias)bloque;
+						ScopeIF sc = scopeManager.getCurrentScope();
+						
+						System.out.println("Estoy en el scope de la funcion");
+						//System.out.println(bq.introducirTabla(sc));
+						
+					
 	
 					scopeManager.closeScope();
 					:} |
@@ -636,7 +638,9 @@ bloque_sentencias ::= LLAVEIZQ
 	ScopeIF ambito = scopeManager.openScope();
 	System.out.println("Tras abrir bloque NO vacio"+ ambito);
 	:} 
-	cuerpo_sentencias LLAVEDER 
+	cuerpo_sentencias:cuerpo {:
+		RESULT = cuerpo;
+	:} LLAVEDER 
 {:
 		scopeManager.closeScope();
 		ScopeIF ambito = scopeManager.getCurrentScope();
@@ -649,32 +653,42 @@ cuerpo_sentencias ::= declar_tipos:declar {:
 
 declar_tipos ::= declar_tipo declar_tipos  | 
 					declar_tipo |
-					declar_variables ;
+					declar_variables:var {:
+						RESULT = var;
+:} ;
 					
-declar_variables ::= declar_variable declar_variables  | 
-						declar_variable |
-						sentencias ;
+declar_variables ::= declar_variable:declar declar_variables{:
+						//Ojoooooo al añadir cosas........
+						:}  | 
+						declar_variable:lista {:
+							RESULT = lista;
+							
+							:} |
+						sentencias:bloque {:
+							RESULT = bloque;
+:} ;
 
 sentencias ::= bloque_sentencias:bloque {:
-			RESULT = bloque;
+			
+			RESULT = (Bloque_sentencias)bloque;
 	:} |
 			bloque_sentencias:bloque sentencias:sen {:
-				Bloque_sentencias bloque_sen;
-				if (bloque ==null)
-					bloque_sen = new Bloque_sentencias();
-				else
-					bloque_sen = (Bloque_sentencias) bloque;
-				
+				Bloque_sentencias bloque_sen = (Bloque_sentencias)sen;
+				bloque_sen.addSentencia((Bloque_sentencias)bloque);
 				bloque_sen.addSentencia((Sentencia)sen);
-				
+			
+			RESULT = bloque_sen;
 				:} |
 			sentencia:sen {:
-				RESULT = (Sentencia)sen;
+				Bloque_sentencias bloque_sen = new Bloque_sentencias();
+				bloque_sen.addSentencia((Sentencia)sen);
+				RESULT = bloque_sen;
 				:}  |
 			sentencia:sen1 sentencias:sen2  {:
-				Bloque_sentencias bloque_sen = new Bloque_sentencias();
+				Bloque_sentencias bloque_sen = (Bloque_sentencias)sen2;
 				bloque_sen.addSentencia((Sentencia)sen1);
 				bloque_sen.addSentencia((Sentencia)sen2);
+				
 				RESULT = bloque_sen;
 
 				
@@ -682,31 +696,31 @@ sentencias ::= bloque_sentencias:bloque {:
 				:} ;
 						
 sentencia ::= sentencia_if:sen {:
-		RESULT = sen;
+		RESULT= (SentenciaIF)sen;
 	
 	:} |
 			sentencia_while:sen {:
-				RESULT = sen;
+				RESULT = (Sentencia_While)sen;
 			
 			:}   |
 			sentencia_printi:sen {:
-				RESULT = sen;
+				RESULT = (Sentencia_simple)sen;
 			
 			:}   |
 			sentencia_printc:sen {:
-				RESULT = sen;
+				RESULT = (Sentencia_printc)sen;
 			
 			:}   |
-			asignacion PUNTOYCOMA:sen {:
-				RESULT = sen;
+			asignacion:asig PUNTOYCOMA {:
+				RESULT = (ExpresionCompuesta)asig;
 			
 			:}   |
-			llamada_funcion PUNTOYCOMA:sen {:
-				RESULT = sen;
+			llamada_funcion:sen PUNTOYCOMA {:
+				RESULT = (Sentencia)sen;
 			
 			:}   |
 			retorno_funcion:sen {:
-				RESULT = sen;
+				RESULT = (Sentencia)sen;
 			
 			:}   ;
 			
