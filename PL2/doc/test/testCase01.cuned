@@ -20,7 +20,9 @@ int sumar( int &x,int &y) {
 
 
 void main() {
-
+mat2[2][0]=dos;
+mat2[0][0]=mat2[2][0];
+x=mat2[2][0];
 	if(a<10) {
 	
 		x=3;

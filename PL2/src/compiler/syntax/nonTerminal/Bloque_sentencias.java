@@ -11,7 +11,7 @@ public class Bloque_sentencias extends Sentencia {
 
 	
 	Declar_variable dec_Variable = new Declar_variable();
-	ArrayList<Sentencia> listaSentencias;
+	ArrayList<Sentencia> listaSentencias = new ArrayList<Sentencia>();
 	//Declaraciones de tipo
 	
 	public Bloque_sentencias() {

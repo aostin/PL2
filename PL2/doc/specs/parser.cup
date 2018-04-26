@@ -669,12 +669,15 @@ sentencias ::= bloque_sentencias:bloque {:
 				
 				:} |
 			sentencia:sen {:
-				RESULT = sen;
+				RESULT = (Sentencia)sen;
 				:}  |
 			sentencia:sen1 sentencias:sen2  {:
-				Bloque_sentencias bloque_sen = new Bloque_sentencias();		
+				Bloque_sentencias bloque_sen = new Bloque_sentencias();
 				bloque_sen.addSentencia((Sentencia)sen1);
 				bloque_sen.addSentencia((Sentencia)sen2);
+				RESULT = bloque_sen;
+
+				
 				
 				:} ;
 						
@@ -752,7 +755,7 @@ asignacion ::= IDENTIFICADOR:id ASIGNACION expresion_sin_asign:ex
  								ts.addSymbol(sMatrix);
  								ExpresionMatriz exp1 = new ExpresionMatriz(((Expresion)ex).getValor(),id.getLexema(), (int)r1,(int)r2);
 								ExpresionCompuesta expCompuesta = new ExpresionCompuesta(((Expresion)ex).getValor(), "tipoAsignacion", exp1, (Expresion)ex);
-								
+								RESULT =expCompuesta;
  								
  							}
  							else
