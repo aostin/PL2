@@ -149,6 +149,9 @@ axiom ::= {:
 			TypeSimple entero = new TypeSimple(ambito,"Entero");
 			tt.addType("Entero",entero);
 			
+			TypeVoid vacio = new TypeVoid(ambito,"Vacio");
+			tt.addType("Vacio", vacio);
+			
 			
 		
 			
@@ -252,13 +255,14 @@ rango_matriz ::= CORIZQ expresion:ex CORDER:c {:
 
 	:};
 
-declar_variable ::= lista_variables_enteras PUNTOYCOMA  {:
+declar_variable ::= lista_variables_enteras:lista PUNTOYCOMA  {:
 	
-	ScopeIF sc = scopeManager.getCurrentScope();
-SymbolTableIF ts = sc.getSymbolTable();
+	RESULT = lista;
+
 
 	:} |	
-					lista_variables_matriz PUNTOYCOMA ;
+					lista_variables_matriz:lista  PUNTOYCOMA {:
+						RESULT = lista;:};
 
 lista_variables_enteras ::=  
 							ENTERO IDENTIFICADOR:id
@@ -502,7 +506,7 @@ lista_variables_matriz ::= IDENTIFICADOR:id1 IDENTIFICADOR:id2  {:
 		
 			if (tt.containsType(id1.getLexema())) {
 				TypeArray tipo = (TypeArray)tt.getType(id1.getLexema());
-				Lista_variables_matriz listaMat = new Lista_variables_matriz(tipo.getR1(), tipo.getR2(), id1.getLexema());
+				Lista_variables_matriz listaMat = new Lista_variables_matriz(tipo.getR1(), tipo.getR2(), tipo);
 				listaMat.addMatriz(id2.getLexema());
 				SymbolMatrix mat = new SymbolMatrix(sc,id2.getLexema(),tipo,tipo.getR1(),tipo.getR2());
 				ts.addSymbol(mat);
@@ -531,9 +535,11 @@ lista_variables_matriz:matrices COMA IDENTIFICADOR:id {:
 	}
 
 	else {
-		
-		if (tt.containsType(listaMat.getTypeName())) {
-			TypeArray tipo = (TypeArray)tt.getType(listaMat.getTypeName());
+		TypeArray tipo = (TypeArray)listaMat.getType();
+	
+			
+		if (tt.containsType(tipo.getName())) {
+
 			listaMat.addMatriz(id.getLexema());
 			SymbolMatrix mat = new SymbolMatrix(sc,id.getLexema(),tipo,tipo.getR1(),tipo.getR2());
 			ts.addSymbol(mat);
@@ -552,7 +558,6 @@ lista_variables_matriz:matrices COMA IDENTIFICADOR:id {:
 declar_funcion ::= ENTERO IDENTIFICADOR:id {:
 					
 					ScopeIF sc = scopeManager.openScope("Funcion");
-					System.out.println("Estoy en el scope de la funcion..." + sc);
 					SymbolTableIF ts = sc.getSymbolTable();
 					if (scopeManager.containsSymbol(id.getLexema())) {
 						semanticErrorManager.semanticFatalError("La funcion " + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
@@ -560,49 +565,166 @@ declar_funcion ::= ENTERO IDENTIFICADOR:id {:
 					}
 					
 	
-					:} declar_parametros:parametros bloque_sentencias:bloque	{:
-						Bloque_sentencias bq = (Bloque_sentencias)bloque;
-						ScopeIF sc = scopeManager.getCurrentScope();
+					:} declar_parametros:parametros bloque_sentencias:dec	{:
+						Declaracion declar = new Declaracion();
+						Declar_parametros param = new Declar_parametros();
+							
+						if (dec instanceof Declaracion){
+							declar = (Declaracion)dec;
+						}
+						/*			else
+						if(dec instanceof Bloque_sentencias)
+								declar.setSentencias((Bloque_sentencias)dec);
+							else
+								if (dec instanceof Lista_variables_Enteras)
+									declar.addListaEnteras((Lista_variables_Enteras)dec);
+								else
+									declar.addListaMatrices((Lista_variables_matriz)dec);
+				*/		ScopeIF sc = scopeManager.getCurrentScope();
+		
+						System.out.println(declar.introducirTabla(sc));
 						
-						System.out.println("Estoy en el scope de la funcion");
-						//System.out.println(bq.introducirTabla(sc));
+						//Introducimos los parametros en la tabla de simbolos de la funcion
+						if (parametros!= null) {
+							param = (Declar_parametros)parametros;
+							param.introducirParametros(sc,semanticErrorManager,id.getLexema());
+						}
+	
+						scopeManager.closeScope();
+						Bloque_sentencias bloque = ((Declaracion)dec).getSentencias();
 						
+						if (bloque.tieneReturn("funcion")) {
+
+							sc = scopeManager.getCurrentScope();
+							SymbolTableIF ts = sc.getSymbolTable();
+						
+							Declar_funcion funcion = new Declar_funcion();
+							funcion.setId(id.getLexema());
+							funcion.setParametros((Declar_parametros)parametros);
+							funcion.setDeclaracion((Declaracion)dec);
+						
+							TypeTableIF tt = sc.getTypeTable();
+							TypeFunction tipoFuncion = new TypeFunction(sc,id.getLexema());
+							tipoFuncion.setListaTipos(param.getListaTipos());
+							//Asignar tipo de retorno...
+							//Añadir la funcion a la lista de tipos
+							tt.addType("id.getLexema()", tipoFuncion);
+						
+							SymbolFunction sFuncion = new SymbolFunction(sc, id.getLexema(),tipoFuncion);
+							sFuncion.setFuncion(funcion);
+							ts.addSymbol(sFuncion);
+							RESULT = funcion;
+						}
+						else
+							semanticErrorManager.semanticFatalError("La funcion " + id.getLexema() + " tiene salidas a la funcion sin return");
+
+					
+						
+							
+						
+					:} |
+					VOID IDENTIFICADOR:id 	{:
+					ScopeIF sc = scopeManager.openScope("Procedimiento");
+					SymbolTableIF ts = sc.getSymbolTable();
+					if (scopeManager.containsSymbol(id.getLexema())) {
+						semanticErrorManager.semanticFatalError("El procedimiento " + id.getLexema() + " ya ha sido declarada en la linea " + id.getLine());
+
+					}
 					
 	
+					:}  declar_parametros:parametros bloque_sentencias:dec{:
+						
+						Declaracion declar = new Declaracion();
+					Declar_parametros param = new Declar_parametros();
+						
+					if (dec instanceof Declaracion){
+						declar = (Declaracion)dec;
+					}
+					/*			else
+					if(dec instanceof Bloque_sentencias)
+							declar.setSentencias((Bloque_sentencias)dec);
+						else
+							if (dec instanceof Lista_variables_Enteras)
+								declar.addListaEnteras((Lista_variables_Enteras)dec);
+							else
+								declar.addListaMatrices((Lista_variables_matriz)dec);
+			*/		ScopeIF sc = scopeManager.getCurrentScope();
+	
+					System.out.println(declar.introducirTabla(sc));
+					
+					//Introducimos los parametros en la tabla de simbolos de la funcion
+					if (parametros!= null) {
+						param = (Declar_parametros)parametros;
+						param.introducirParametros(sc,semanticErrorManager,id.getLexema());
+					}
+
 					scopeManager.closeScope();
-					:} |
-					VOID IDENTIFICADOR declar_parametros bloque_sentencias ;
+					Bloque_sentencias bloque = ((Declaracion)dec).getSentencias();
+					
+					if (bloque.tieneReturn("procedimiento")) {
+
+						sc = scopeManager.getCurrentScope();
+						SymbolTableIF ts = sc.getSymbolTable();
+					
+						Declar_funcion funcion = new Declar_funcion();
+						funcion.setId(id.getLexema());
+						funcion.setParametros((Declar_parametros)parametros);
+						funcion.setDeclaracion((Declaracion)dec);
+					
+						TypeTableIF tt = sc.getTypeTable();
+						TypeFunction tipoFuncion = new TypeFunction(sc,id.getLexema());
+						tipoFuncion.setListaTipos(param.getListaTipos());
+						//Asignar tipo de retorno...
+						//Añadir la funcion a la lista de tipos
+						tt.addType("id.getLexema()", tipoFuncion);
+					
+						SymbolFunction sFuncion = new SymbolFunction(sc, id.getLexema(),tipoFuncion);
+						sFuncion.setFuncion(funcion);
+						ts.addSymbol(sFuncion);
+						RESULT = funcion;
+					}
+					else
+						semanticErrorManager.semanticFatalError("La funcion " + id.getLexema() + " tiene salidas a la funcion sin return");
+
+						
+						
+						
+						
+						
+						:} ;
 
 declar_main ::= VOID MAIN PARIZQ PARDER bloque_sentencias;
 
 declar_parametros ::= PARIZQ PARDER  |
-					  PARIZQ lista_declar_parametros:listaTipos {:
-						  System.out.println(((ArrayList<TypeIF>)listaTipos).size());
-						  
+					  PARIZQ lista_declar_parametros:parametros {:
+						  RESULT = parametros;
 						  :}
 					  
 					  
 					  PARDER ;
 				
-lista_declar_parametros ::= tipo_parametros:tipo  REFERENCIA IDENTIFICADOR {:
+lista_declar_parametros ::= tipo_parametros:tipo  REFERENCIA IDENTIFICADOR:id {:
 								
-								ArrayList<TypeIF> listaTipos = new ArrayList<TypeIF>();
-								listaTipos.add((TypeIF)tipo);
-								RESULT = listaTipos;
+								Declar_parametros parametros = new Declar_parametros();
+								parametros.addTipo((TypeIF)tipo);
+								parametros.addId(id.getLexema());
+								RESULT = parametros;
 								:}
 
 
 								|
-					 		lista_declar_parametros:lista COMA tipo_parametros:tipo REFERENCIA IDENTIFICADOR {:
-								ArrayList<TypeIF> listaTipos;
+					 		lista_declar_parametros:param COMA tipo_parametros:tipo REFERENCIA IDENTIFICADOR:id {:
 								
-								if (lista == null)
-									listaTipos = new ArrayList<TypeIF>();
-								else
-										listaTipos = (ArrayList<TypeIF>) lista;
-								listaTipos.add((TypeIF)tipo);
+					 			Declar_parametros parametros = new Declar_parametros();
 								
-								RESULT = listaTipos;
+								if (param != null)
+									parametros = (Declar_parametros) param;
+								
+								
+								parametros.addTipo((TypeIF)tipo);
+								parametros.addId(id.getLexema());
+								RESULT = parametros;
+								
 					 			
 					 			:} ;
 					
@@ -651,21 +773,97 @@ cuerpo_sentencias ::= declar_tipos:declar {:
 		RESULT = declar;
 			:} ;	
 
-declar_tipos ::= declar_tipo declar_tipos  | 
-					declar_tipo |
+declar_tipos ::= declar_tipo:declar declar_tipos:declaraciones {:
+					
+					Declaracion dec = new Declaracion();
+					if (declaraciones instanceof Declaracion){
+						dec = (Declaracion)declaraciones;
+					}
+					
+					else
+						if (declaraciones instanceof Lista_variables_Enteras) 
+							dec.addListaEnteras((Lista_variables_Enteras)declaraciones);
+						else {
+							if (declaraciones instanceof Lista_variables_matriz)
+								dec.addListaMatrices((Lista_variables_matriz)declaraciones);
+							else {
+								if (declaraciones instanceof Bloque_sentencias)
+									dec.setSentencias((Bloque_sentencias)declaraciones);
+								else
+									dec.addListaTipos((Declar_tipo)declaraciones);
+							}
+			
+						}
+
+					if (declar instanceof Lista_variables_Enteras) 
+						dec.addListaEnteras((Lista_variables_Enteras)declar);
+					else {
+						if (declar instanceof Lista_variables_matriz)
+							dec.addListaMatrices((Lista_variables_matriz)declar);
+						else {
+							if (declaraciones instanceof Bloque_sentencias)
+								dec.setSentencias((Bloque_sentencias)declar);
+							else
+								dec.addListaTipos((Declar_tipo)declar);
+							
+						}
+	
+					}							
+					RESULT = dec;
+					:}  | 
+					declar_tipo:tipo {:
+						RESULT = tipo;
+						
+						
+						:} |
 					declar_variables:var {:
 						RESULT = var;
 :} ;
 					
-declar_variables ::= declar_variable:declar declar_variables{:
+declar_variables ::= declar_variable:declar declar_variables:declaraciones{:
+						Declaracion dec = (Declaracion)declar;
+						
+							if (declaraciones instanceof Lista_variables_Enteras) 
+								dec.addListaEnteras((Lista_variables_Enteras)declaraciones);
+							else {
+								if (declaraciones instanceof Lista_variables_matriz)
+									dec.addListaMatrices((Lista_variables_matriz)declaraciones);
+								else {
+									dec.setSentencias((Bloque_sentencias)declaraciones);
+								}
+								
+							}
+						
+					if (declar instanceof Lista_variables_Enteras) 
+							dec.addListaEnteras((Lista_variables_Enteras)declar);
+						else {
+							if (declar instanceof Lista_variables_matriz)
+								dec.addListaMatrices((Lista_variables_matriz)declar);
+							else {
+								dec.setSentencias((Bloque_sentencias)declar);
+								System.out.println("He pasado por aqui...");
+							}
+							
+						}
+					
+				
+						RESULT = dec;
 						//Ojoooooo al añadir cosas........
 						:}  | 
 						declar_variable:lista {:
-							RESULT = lista;
 							
+							Declaracion dec = new Declaracion();
+							if (lista instanceof Lista_variables_Enteras)
+								dec.addListaEnteras((Lista_variables_Enteras)lista);
+							else
+								dec.addListaMatrices((Lista_variables_matriz)lista);
+							
+							RESULT = dec;
 							:} |
 						sentencias:bloque {:
-							RESULT = bloque;
+							Declaracion dec = new Declaracion();
+							dec.setSentencias((Bloque_sentencias)bloque);
+							RESULT = dec;
 :} ;
 
 sentencias ::= bloque_sentencias:bloque {:
@@ -877,6 +1075,7 @@ expresion_sin_asign ::= NUMERO:num {:
 							Expresion exp1 = (Expresion)ex1;
 							Expresion exp2 = (Expresion)ex2;
 							int valor;
+							
 							if (exp1.getValor() < exp2.getValor())
 								valor=1;
 							else
@@ -962,17 +1161,107 @@ expresion ::= expresion_sin_asign:ex {:
 					:};
 }
 				
-llamada_funcion ::= IDENTIFICADOR lista_parametros ;
+llamada_funcion ::= IDENTIFICADOR:id lista_parametros:lista {:
+	
+				ScopeIF sc = scopeManager.getCurrentScope();
+				SymbolTableIF ts = sc.getSymbolTable();
+				
+				if ( scopeManager.containsSymbol(id.getLexema())) {
+					SymbolFunction sFunction = (SymbolFunction)scopeManager.searchSymbol(id.getLexema());
+					Declar_funcion funcion = sFunction.getFuncion();
+					funcion.compruebaParametros(scopeManager,semanticErrorManager,(ArrayList<String>)lista,id.getLine());
+					/*Declar_parametros dParametros = funcion.getParametros();
+					ArrayList<String>listaDeclarados= dParametros.getListaIds();
+					ArrayList<String>listaLlamados = (ArrayList<String>) lista;*/
+					LLamada_funcion llamada = new LLamada_funcion();
+					llamada.setId(id.getLexema());
+					llamada.setListaIds((ArrayList<String>)lista);
+					RESULT = llamada;
+					
+				}
+				
+				else
+					semanticErrorManager.semanticFatalError("Error. Funcion " + id.getLexema() + " no definida en la linea " + id.getLine() );
+	
+	
+	
+	:} ;
 
 
 lista_parametros ::= PARIZQ PARDER  |
-					 PARIZQ parametros PARDER;
+					 PARIZQ parametros:param PARDER{:
+						 if (param instanceof ArrayList)
+							 RESULT = param;
+						 else {
+							 ArrayList<String> pFuncion = new ArrayList<String>();
+							 pFuncion.add((String)param);
+							 RESULT = pFuncion;
+						 }
+						 
+						:};
 					 
-parametros ::= parametro |
-				parametros COMA parametro;
+parametros ::= parametro: param {:
+			RESULT = param;
+	
+	:} |
+				parametros:params COMA parametro:param {:
+					ArrayList<String> pFuncion = new ArrayList<String>();
+					
+					if (params instanceof ArrayList) {
+						pFuncion = (ArrayList<String>)params;
+					}
+					else
+						pFuncion.add((String)params);
+					
+					pFuncion.add((String)param);
+					
+					RESULT = pFuncion;
+					
+					
+					
+					:};
 				
-parametro ::= IDENTIFICADOR  |
-				IDENTIFICADOR rango_matriz rango_matriz ;
+parametro ::= IDENTIFICADOR:id {:
+		
+		ScopeIF sc = scopeManager.getCurrentScope();
+		SymbolTableIF ts = sc.getSymbolTable();
+		
+		if (scopeManager.containsSymbol(id.getLexema())) {
+			RESULT = id.getLexema();
+	
+			}
+		else
+			semanticErrorManager.semanticFatalError("Error. Identificador " + id.getLexema() + " no definido en la llamada a la funcion en la linea " + id.getLine());
+
+
+	
+	
+	
+	:}  |
+				IDENTIFICADOR:id rango_matriz:r1 rango_matriz:r2 {:
+					ScopeIF sc = scopeManager.getCurrentScope();
+					SymbolTableIF ts = sc.getSymbolTable();
+					
+					if (ts.containsSymbol(id.getLexema())) {
+						RESULT = id.getLexema();
+						SymbolMatrix sMatrix =(SymbolMatrix) (ts.getSymbol(id.getLexema()));
+						if(sMatrix.getDefinido((int)r1,(int)r2))
+							RESULT = id.getLexema();
+						
+						else
+							semanticErrorManager.semanticFatalError("Error. El valor " + id.getLexema() + "[" + r1 +"][" + r2 + "] no ha sido definido en la linea " + id.getLine());
+
+
+						
+					}
+					else
+						semanticErrorManager.semanticFatalError("Error. Identificador " + id.getLexema() + " no definido en la llamada a la funcion en la linea " + id.getLine());
+					
+					
+					
+					:} ;
+
+
 
 sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 			Expresion expresion = (Expresion)ex;
@@ -1071,7 +1360,7 @@ sentencia_if ::= IF PARIZQ:p expresion:ex PARDER sentencia:sen {:
 						if (expresion.getValor()==0 || expresion.getValor()==1) {
 							SentenciaIF sIF = new SentenciaIF((Expresion)ex, true);
 							sIF.setS1((Bloque_sentencias)bloque1);
-							sIF.setS2((Bloque_sentencias)bloque1);
+							sIF.setS2((Bloque_sentencias)bloque2);
 							RESULT = sIF;
 				}
 
@@ -1152,6 +1441,11 @@ retorno_funcion ::= RETURN expresion:ex PUNTOYCOMA {:
 
 
 |
-					RETURN PUNTOYCOMA;
+					RETURN PUNTOYCOMA {:
+						Sentencia_simple simple = new Sentencia_simple();
+						simple.setTipo("returnVacio");
+						RESULT = simple;
+						
+						:};
 					
 					

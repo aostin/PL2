@@ -11,10 +11,53 @@ int f,g,o=a;
 int i,x,z=34;
 int b=uno;
 matriz2 mat2, mat3;
-int sumar( int &x,int &y) {
+
+int proc(int &alc, int &alc3) {
+	int i;
+	x=2;
+	return 3;
+
+
+}
+
+
+int sumar( int &f,int &y) {
+	int m[3][4];
+	int ja;
+	m m1;
+	int as=3;
 	x=3;
 	x=4;
-	return a + a;
+	if (x<4) {
+	
+			
+		as=5;
+		return 5;
+		as=5;
+	}
+	
+	else {
+		if (x<3) {
+			return 4;
+			}
+		else {
+		x=4;
+		return 10;
+			}
+		x=3;
+		
+		}
+		
+		while (3<0) {
+			if(x<4) {
+				return 3;
+				}
+			else {
+				return 4;				}
+				}
+				
+				
+
 	
 	}
 
@@ -29,6 +72,7 @@ x=mat2[2][0];
 		x=3;
 }	
 
+sumar(x, x);
 
 printi(a=2);
 

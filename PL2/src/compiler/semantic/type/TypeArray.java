@@ -54,12 +54,14 @@ public class TypeArray
     public int getR2() {
     	return this.r2;
     }    
- public static boolean rangoCorrecto(int r1, int r2) {
+    public static boolean rangoCorrecto(int r1, int r2) {
     	if (TypeSimple.rangoPositivo(r1) && TypeSimple.rangoPositivo(r2))
     		return true;
     	else
     		return false;
     }
     
+
+ 
     
 }

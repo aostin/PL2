@@ -1,7 +1,9 @@
 package compiler.semantic.symbol;
 
 import es.uned.lsi.compiler.semantic.ScopeIF;
+import java.util.ArrayList;
 import es.uned.lsi.compiler.semantic.type.TypeIF;
+import compiler.syntax.nonTerminal.*;
 
 /**
  * Class for SymbolFunction.
@@ -13,6 +15,8 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class SymbolFunction
     extends SymbolProcedure
 {
+	
+	Declar_funcion funcion = new Declar_funcion();
       
     /**
      * Constructor for SymbolFunction.
@@ -26,4 +30,13 @@ public class SymbolFunction
     {
         super (scope, name, type);
     } 
+    
+    
+    public void setFuncion(Declar_funcion funcion) {
+    	this.funcion = funcion;
+    }
+    
+    public Declar_funcion getFuncion() {
+    	return this.funcion;
+    }
 }

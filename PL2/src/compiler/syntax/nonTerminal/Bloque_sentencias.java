@@ -26,17 +26,46 @@ public class Bloque_sentencias extends Sentencia {
 		return listaSentencias;
 	}
 	
-/*	public SymbolTableIF introducirTabla(ScopeIF sc) {
-		SymbolTableIF ts = sc.getSymbolTable();
-		
-		for (Lista_variables_Enteras lista: listaEnteras ){
-			ArrayList<String> variables = lista.getVariables();
-			for (String var: variables) {
-				SymbolVariable sVar = new SymbolVariable(sc,var,lista.getType(),lista.getValor());
-				ts.addSymbol(sVar);
+	public boolean tieneReturn(String tipo) {
+		Boolean tieneReturn;
+		if (tipo.equals("funcion"))
+			tieneReturn = false;
+		else
+			tieneReturn=true;
+		//Comprueba primero si tiene una sentencia simple de retorno
+		//Luego comprueba que exista paridad en los retornos de los if
+		for (Sentencia sen: listaSentencias) {
+			if (sen instanceof Sentencia_simple){
+				Sentencia_simple senSimple = (Sentencia_simple)sen;
+				if ((senSimple.getTipo()).equals("return"))
+				
+					//Si existe una sentencia return en el bloque devuelve true ya que siempre pasará por este camino
+					return true;
+					/*Expresion ex = senSimple.getEx();
+					System.out.println(senSimple.getTipo());
+					System.out.println(ex.getValor());
+					*/
+				}
+				else {
+					if (sen instanceof SentenciaIF) {
+						SentenciaIF sIF = (SentenciaIF)sen;
+						tieneReturn= sIF.compruebaReturns(tipo);
+						
+				
+				}
 			}
 			
+			if (sen instanceof Sentencia_While) {
+				Sentencia_While senWhile = (Sentencia_While)sen;
+				tieneReturn= senWhile.compruebaReturns(tipo);
+				if (tieneReturn==false)
+					return false;
+			}
 		}
-		return ts;
-	}*/
+		
+			
+		return tieneReturn;
+	}
+	
+
 }

@@ -1,7 +1,7 @@
-problema con sentencia sentencias
-bloque sentencias
-asignacio = expresioncompuesta
+ifs sin corchetes
+funciones void
 
 
-hacer nueva clase sentencias
-devolver siempre sentencias (nueva clase)
+no deja devolver parametros
+declaracion de funciones sin declaracion de variables
+return en void

@@ -35,4 +35,29 @@ public class SentenciaIF extends Sentencia {
 	public Bloque_sentencias getS2() {
 		return this.s2;
 	}
+	
+	public Boolean compruebaReturns(String tipo) {
+		Boolean rS1= false;
+		Boolean rS2=false;
+		if (s1!=null) {
+			rS1=s1.tieneReturn(tipo);
+			
+		}
+		
+		if(tieneElse==true){
+			System.out.println("sadffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+			rS2=s2.tieneReturn(tipo);
+			System.out.println(rS2);
+			return (rS1 && rS2);
+		}
+		else
+			return rS1;
+		
+		
+		
+		
+		
+	}
+	
+	
 }

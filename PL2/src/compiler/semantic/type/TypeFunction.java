@@ -1,6 +1,10 @@
 package compiler.semantic.type;
 
+import java.util.ArrayList;
+
 import es.uned.lsi.compiler.semantic.ScopeIF;
+import es.uned.lsi.compiler.semantic.ScopeIF;
+import es.uned.lsi.compiler.semantic.type.TypeIF;
 
 /**
  * Class for TypeFunction.
@@ -12,7 +16,8 @@ import es.uned.lsi.compiler.semantic.ScopeIF;
 public class TypeFunction
     extends TypeProcedure
 {   
-    
+    ArrayList<TypeIF> listaTipos = new ArrayList<TypeIF>();
+    TypeIF tipoRetorno;
     /**
      * Constructor for TypeFunction.
      * @param scope The declaration scope.
@@ -42,4 +47,23 @@ public class TypeFunction
         // TODO: Student work
         return 1;
     }
+    
+    public void setListaTipos (ArrayList<TypeIF> listaTipos) {
+    	this.listaTipos = listaTipos;
+    }
+    
+    public ArrayList<TypeIF> getListaTipos () {
+    	return this.listaTipos;
+    }
+    
+    
+    public void setTipoRetorno(TypeIF tipoRetorno) {
+    	this.tipoRetorno = tipoRetorno;
+    }
+    
+    public TypeIF getTipoRetorno() {
+    	return this.tipoRetorno;
+    }
+    
+    
 }

@@ -1,6 +1,6 @@
 package compiler.syntax.nonTerminal;
 
-public class Sentencia_While {
+public class Sentencia_While extends Sentencia{
 	
 	Expresion ex;
 	Bloque_sentencias s1 = new Bloque_sentencias();
@@ -26,5 +26,20 @@ public class Sentencia_While {
 	public Bloque_sentencias getS1() {
 		return this.s1;
 	}
+	
+	public Boolean compruebaReturns(String tipo) {
+		Boolean rS1= false;
+		if (s1!=null) {
+			rS1=s1.tieneReturn(tipo);
+			
+		}
+		
+		return rS1;
+		
+		
+	}
+	
+	
+	
 
 }
